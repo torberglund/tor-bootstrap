@@ -3,7 +3,15 @@ set -euo pipefail
 
 echo "🔍 Detecting system and selecting package manager..."
 
-# Determine package manager
+# --- Initialization ---
+declare -A STATUS
+function mark_status() {
+  local key="$1"
+  local result="$2"
+  STATUS["$key"]="$result"
+}
+
+# --- Detect package manager ---
 if command -v zypper &> /dev/null; then
   PM="zypper"
   INSTALL="sudo zypper install -y"
@@ -24,17 +32,22 @@ fi
 
 echo "📦 Using package manager: $PM"
 
-# Install essential packages
-echo "🔧 Installing zsh, git, curl, wget, python3, nodejs, npm, ca-certificates..."
-$INSTALL zsh git curl wget python3 nodejs npm ca-certificates
+# --- Install essential packages ---
+ESSENTIALS=(zsh git curl wget python3 nodejs npm ca-certificates)
+echo "🔧 Installing essentials: ${ESSENTIALS[*]}"
+if $INSTALL "${ESSENTIALS[@]}"; then
+  mark_status "Essentials" "✅"
+else
+  mark_status "Essentials" "❌"
+fi
 
-# Install GitHub CLI
+# --- GitHub CLI ---
 if ! command -v gh &> /dev/null; then
   echo "🐙 Installing GitHub CLI (gh)..."
   if [[ "$PM" == "zypper" ]]; then
-    sudo zypper addrepo https://cli.github.com/packages/rpm/gh-cli.repo
-    sudo rpm --import https://cli.github.com/packages/githubcli-archive-keyring.gpg
-    $INSTALL gh
+    sudo zypper addrepo https://cli.github.com/packages/rpm/gh-cli.repo || true
+    sudo rpm --import https://cli.github.com/packages/githubcli-archive-keyring.gpg || true
+    $INSTALL gh && mark_status "GitHub CLI" "✅" || mark_status "GitHub CLI" "❌"
   elif [[ "$PM" == "apt" ]]; then
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -42,65 +55,108 @@ if ! command -v gh &> /dev/null; then
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
       | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     sudo apt update
-    $INSTALL gh
+    if $INSTALL gh; then mark_status "GitHub CLI" "✅"; else mark_status "GitHub CLI" "❌"; fi
   elif [[ "$PM" == "pacman" ]]; then
-    $INSTALL github-cli
+    $INSTALL github-cli && mark_status "GitHub CLI" "✅" || mark_status "GitHub CLI" "❌"
   else
-    $INSTALL gh || $INSTALL github-cli
+    $INSTALL gh || $INSTALL github-cli && mark_status "GitHub CLI" "✅" || mark_status "GitHub CLI" "❌"
   fi
+else
+  echo "✅ GitHub CLI already installed."
+  mark_status "GitHub CLI" "✅"
 fi
 
-# Install Tailscale
+# --- Tailscale ---
 if ! command -v tailscale &> /dev/null; then
   echo "🌐 Installing Tailscale..."
-  curl -fsSL https://tailscale.com/install.sh | sh
+  if curl -fsSL https://tailscale.com/install.sh | sh; then
+    mark_status "Tailscale" "✅"
+  else
+    mark_status "Tailscale" "❌"
+  fi
+else
+  mark_status "Tailscale" "✅"
 fi
 
-# Install Oh My Zsh
+# --- Oh My Zsh ---
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
   echo "💡 Installing Oh My Zsh..."
-  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  if RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; then
+    mark_status "Oh My Zsh" "✅"
+  else
+    mark_status "Oh My Zsh" "❌"
+  fi
 else
-  echo "✅ Oh My Zsh already installed."
+  mark_status "Oh My Zsh" "✅"
 fi
 
-# Ensure zsh is listed in /etc/shells (for chsh to work)
+# --- Powerlevel10k theme ---
 ZSH_PATH=$(which zsh)
 if ! grep -q "$ZSH_PATH" /etc/shells; then
   echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
 fi
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+if git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+  ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k 2>/dev/null; then
+  mark_status "Powerlevel10k" "✅"
+else
+  mark_status "Powerlevel10k" "⚠️ (already exists or failed)"
+fi
 
-# Set zsh as default shell
+# --- Set zsh default ---
 if [[ "$SHELL" != *zsh ]]; then
   echo "🌀 Changing default shell to zsh..."
-  chsh -s "$ZSH_PATH"
+  if chsh -s "$ZSH_PATH"; then
+    mark_status "Default Shell (zsh)" "✅"
+  else
+    mark_status "Default Shell (zsh)" "❌"
+  fi
+else
+  mark_status "Default Shell (zsh)" "✅"
 fi
 
-# Install Codex CLI
+# --- Codex CLI ---
 if ! command -v codex &> /dev/null; then
-  echo "🤖 Installing Codex CLI (OpenAI)..."
-  sudo npm install -g codex-cli
+  echo "🤖 Installing Codex CLI..."
+  if sudo npm install -g codex-cli; then
+    mark_status "Codex CLI" "✅"
+  else
+    mark_status "Codex CLI" "❌"
+  fi
+else
+  mark_status "Codex CLI" "✅"
 fi
 
-# Install Meslo Nerd Fonts
-echo "🎨 Installing MesloLGS Nerd Font for Powerlevel10k..."
+# --- Fonts ---
+echo "🎨 Installing MesloLGS Nerd Fonts..."
 FONT_DIR="$HOME/.local/share/fonts"
 mkdir -p "$FONT_DIR"
 cd "$FONT_DIR"
+if wget -q \
+  https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf \
+  https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf \
+  https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf \
+  https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf; then
+  fc-cache -fv >/dev/null 2>&1
+  mark_status "Meslo Nerd Fonts" "✅"
+else
+  mark_status "Meslo Nerd Fonts" "❌"
+fi
 
-wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf
-wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf
-wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf
-wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf
-
-fc-cache -fv
-
+# --- Summary ---
 echo
-echo "✅ All set. You can now run:"
-echo "   → 'exec zsh' to enter zsh"
-echo "   → 'gh auth login' to authenticate GitHub CLI"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📋 INSTALLATION SUMMARY"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+for key in "${!STATUS[@]}"; do
+  printf "%-25s %s\n" "$key" "${STATUS[$key]}"
+done
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo
+echo "✅ All done! You can now run:"
+echo "   → 'exec zsh' to start Zsh"
+echo "   → 'gh auth login' to authenticate GitHub"
 echo "   → 'tailscale up' to connect"
 echo "   → 'codex' to use Codex CLI"
-echo "   → Set terminal font to 'MesloLGS NF' for Powerlevel10k to render properly"
+echo "   → Set terminal font to 'MesloLGS NF' for Powerlevel10k"
+
