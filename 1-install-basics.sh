@@ -70,6 +70,7 @@ ZSH_PATH=$(which zsh)
 if ! grep -q "$ZSH_PATH" /etc/shells; then
   echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
 fi
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 
 # Set zsh as default shell
 if [[ "$SHELL" != *zsh ]]; then
