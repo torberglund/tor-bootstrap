@@ -8,12 +8,14 @@ PUBLIC_KEY_PATH="$SSH_DIR/id_ed25519.pub"
 
 echo "🔐 Fetching private key '$KEY_NAME' from 1Password..."
 
-# Create .ssh dir if needed
 mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 
-# Fetch and write private key
-op item get "$KEY_NAME" --fields private_key --reveal > "$PRIVATE_KEY_PATH"
+# Fetch the key and filter only between BEGIN/END, then wrap properly
+op item get "$KEY_NAME" --fields private_key --reveal \
+  | sed -n '/^-----BEGIN OPENSSH PRIVATE KEY-----$/,/^-----END OPENSSH PRIVATE KEY-----$/p' \
+  > "$PRIVATE_KEY_PATH"
+
 chmod 600 "$PRIVATE_KEY_PATH"
 
 echo "🛠 Generating public key from private key..."
