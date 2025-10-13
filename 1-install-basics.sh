@@ -83,9 +83,23 @@ if ! command -v codex &> /dev/null; then
   sudo npm install -g codex-cli
 fi
 
+# Install Meslo Nerd Fonts
+echo "🎨 Installing MesloLGS Nerd Font for Powerlevel10k..."
+FONT_DIR="$HOME/.local/share/fonts"
+mkdir -p "$FONT_DIR"
+cd "$FONT_DIR"
+
+wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf
+wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf
+wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf
+wget -q https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf
+
+fc-cache -fv
+
 echo
 echo "✅ All set. You can now run:"
 echo "   → 'exec zsh' to enter zsh"
 echo "   → 'gh auth login' to authenticate GitHub CLI"
 echo "   → 'tailscale up' to connect"
 echo "   → 'codex' to use Codex CLI"
+echo "   → Set terminal font to 'MesloLGS NF' for Powerlevel10k to render properly"
