@@ -5,17 +5,17 @@ SCRIPT_DIR="$(pwd)"
 shopt -s nullglob
 
 # Find all n_scriptname.sh files, sorted by numeric prefix
-FILES=($(find "$SCRIPT_DIR" -maxdepth 1 -type f -name '[0-9]*_*.sh' | sort))
+FILES=($(find "$SCRIPT_DIR" -maxdepth 1 -type f -name '[0-9]*-*.sh' | sort))
 
 if [[ ${#FILES[@]} -eq 0 ]]; then
-  echo "❌ No numbered scripts (e.g. 1_setup.sh) found in $SCRIPT_DIR"
+  echo "❌ No numbered scripts (e.g. 1-setup.sh) found in $SCRIPT_DIR"
   exit 1
 fi
 
 echo "📦 Bootstrap Menu:"
 for i in "${!FILES[@]}"; do
   FILENAME="$(basename "${FILES[$i]}")"
-  NAME="${FILENAME#*_}"  # strip the prefix
+  NAME="${FILENAME#*-}"  # strip the prefix
   printf "  [%d] %s\n" "$((i+1))" "$NAME"
 done
 
