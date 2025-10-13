@@ -16,8 +16,7 @@ elif command -v dnf &> /dev/null; then
   INSTALL="sudo dnf install -y"
 elif command -v pacman &> /dev/null; then
   PM="pacman"
-  sudo pacman -Sy
-  INSTALL="sudo pacman -S --noconfirm"
+  INSTALL="sudo pacman -Sy --noconfirm"
 else
   echo "❌ Unsupported package manager. Install packages manually."
   exit 1
@@ -26,8 +25,8 @@ fi
 echo "📦 Using package manager: $PM"
 
 # Install essential packages
-echo "🔧 Installing zsh, git, curl, wget, python3, nodejs, npm..."
-$INSTALL zsh git curl wget python3 nodejs npm
+echo "🔧 Installing zsh, git, curl, wget, python3, nodejs, npm, ca-certificates..."
+$INSTALL zsh git curl wget python3 nodejs npm ca-certificates
 
 # Install GitHub CLI
 if ! command -v gh &> /dev/null; then
@@ -37,13 +36,17 @@ if ! command -v gh &> /dev/null; then
     sudo rpm --import https://cli.github.com/packages/githubcli-archive-keyring.gpg
     $INSTALL gh
   elif [[ "$PM" == "apt" ]]; then
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
     sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     sudo apt update
     $INSTALL gh
+  elif [[ "$PM" == "pacman" ]]; then
+    $INSTALL github-cli
   else
-    $INSTALL gh
+    $INSTALL gh || $INSTALL github-cli
   fi
 fi
 
@@ -62,13 +65,19 @@ else
   echo "✅ Oh My Zsh already installed."
 fi
 
+# Ensure zsh is listed in /etc/shells (for chsh to work)
+ZSH_PATH=$(which zsh)
+if ! grep -q "$ZSH_PATH" /etc/shells; then
+  echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
+fi
+
 # Set zsh as default shell
 if [[ "$SHELL" != *zsh ]]; then
   echo "🌀 Changing default shell to zsh..."
-  chsh -s "$(which zsh)"
+  chsh -s "$ZSH_PATH"
 fi
 
-# Install Codex CLI globally
+# Install Codex CLI
 if ! command -v codex &> /dev/null; then
   echo "🤖 Installing Codex CLI (OpenAI)..."
   sudo npm install -g codex-cli
