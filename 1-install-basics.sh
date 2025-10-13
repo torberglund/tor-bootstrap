@@ -26,8 +26,8 @@ fi
 echo "📦 Using package manager: $PM"
 
 # Install essential packages
-echo "🔧 Installing zsh, git, gh, python3, curl, wget..."
-$INSTALL zsh git curl wget python3
+echo "🔧 Installing zsh, git, curl, wget, python3, nodejs, npm..."
+$INSTALL zsh git curl wget python3 nodejs npm
 
 # Install GitHub CLI
 if ! command -v gh &> /dev/null; then
@@ -53,7 +53,7 @@ if ! command -v tailscale &> /dev/null; then
   curl -fsSL https://tailscale.com/install.sh | sh
 fi
 
-# Install Oh My Zsh if not already installed
+# Install Oh My Zsh
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
   echo "💡 Installing Oh My Zsh..."
   RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
@@ -68,4 +68,15 @@ if [[ "$SHELL" != *zsh ]]; then
   chsh -s "$(which zsh)"
 fi
 
-echo "✅ Done. Restart your terminal or run 'exec zsh' to enter Zsh."
+# Install Codex CLI globally
+if ! command -v codex &> /dev/null; then
+  echo "🤖 Installing Codex CLI (OpenAI)..."
+  sudo npm install -g codex-cli
+fi
+
+echo
+echo "✅ All set. You can now run:"
+echo "   → 'exec zsh' to enter zsh"
+echo "   → 'gh auth login' to authenticate GitHub CLI"
+echo "   → 'tailscale up' to connect"
+echo "   → 'codex' to use Codex CLI"
