@@ -4,7 +4,7 @@ set -e
 # sudo apt update && sudo apt install -y zsh git curl && git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k && chsh -s $(which zsh)
 # 1. Clone bare repo if it doesn't already exist
 if [ ! -d "$HOME/.dotfiles" ]; then
-  gh repo clone --bare torberglund/dotfiles ~/.dotfiles
+  gh repo clone torberglund/dotfiles ~/.dotfiles -- --bare
 fi
 
 # 2. Temporary alias for the bare repo
