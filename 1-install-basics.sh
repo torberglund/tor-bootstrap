@@ -41,13 +41,7 @@ else
   mark_status "Essentials" "❌"
 fi
 
-# --- Timeshift (System Snapshots) ---
-echo "🕒 Installing Timeshift for system snapshots..."
-if $INSTALL timeshift; then
-  mark_status "Timeshift" "✅"
-else
-  mark_status "Timeshift" "❌"
-fi
+
 
 # --- GitHub CLI ---
 if ! command -v gh &> /dev/null; then
